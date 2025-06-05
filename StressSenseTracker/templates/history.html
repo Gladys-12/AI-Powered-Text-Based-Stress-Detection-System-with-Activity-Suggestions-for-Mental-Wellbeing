@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}History - StressSense{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="section-title">
+                        <i class="fas fa-history me-2"></i>
+                        Your Emotion History
+                    </h2>
+                    <p class="text-muted">Track your emotional journey over time</p>
+                </div>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>New Analysis
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if logs.items %}
+    <!-- History Items -->
+    <div class="row">
+        <div class="col-12">
+            {% for log in logs.items %}
+            <div class="history-card mb-3">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="d-flex align-items-start">
+                            <div class="emotion-indicator me-3">
+                                {% if log.predicted_emotion == 'joy' %}
+    <i class="fas fa-smile-beam" style="color: #FFD700;"></i>
+{% elif log.predicted_emotion == 'sadness' %}
+    <i class="fas fa-sad-tear" style="color: #2196F3;"></i>
+{% elif log.predicted_emotion == 'anger' %}
+    <i class="fas fa-angry" style="color: #F44336;"></i>
+{% elif log.predicted_emotion == 'fear' %}
+    <i class="fas fa-exclamation-triangle" style="color: #8A2BE2;"></i>
+{% elif log.predicted_emotion == 'love' %}
+    <i class="fas fa-heart" style="color: #FF69B4;"></i>
+{% elif log.predicted_emotion == 'surprise' %}
+    <i class="fas fa-surprise" style="color: #00FA9A;"></i>
+{% elif log.predicted_emotion == 'neutral' %}
+    <i class="fas fa-meh" style="color: #607D8B;"></i>
+{% elif log.predicted_emotion == 'disgust' %}
+    <i class="fas fa-flushed" style="color: #4CAF50;"></i>
+{% else %}
+    <i class="fas fa-question-circle" style="color: #9E9E9E;"></i>
+{% endif %}
+
+                               
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="emotion-badge emotion-{{ log.predicted_emotion }}">
+                                        {{ log.predicted_emotion.title() }}
+                                    </span>
+                                    <small class="text-muted ms-3">
+                                        <i class="fas fa-clock me-1"></i>
+                                        {{ log.timestamp.strftime('%B %d, %Y at %I:%M %p') }}
+                                    </small>
+                                </div>
+                                <p class="history-text mb-0">{{ log.text_input }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        {% if log.confidence_score %}
+                        <div class="confidence-display">
+                            <small class="text-muted">Confidence</small>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" style="width: {{ (log.confidence_score * 100)|round }}%"></div>
+                            </div>
+                            <small class="text-muted">{{ "%.0f"|format(log.confidence_score * 100) }}%</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if logs.pages > 1 %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <nav aria-label="History pagination">
+                <ul class="pagination justify-content-center">
+                    {% if logs.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('history', page=logs.prev_num) }}">
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in logs.iter_pages() %}
+                        {% if page_num %}
+                            {% if page_num != logs.page %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('history', page=page_num) }}">{{ page_num }}</a>
+                            </li>
+                            {% else %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                            {% endif %}
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if logs.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('history', page=logs.next_num) }}">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="row">
+        <div class="col-md-6 mx-auto text-center">
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h4>No Emotion Logs Yet</h4>
+                <p class="text-muted mb-4">
+                    Start tracking your emotional journey by analyzing your first text.
+                </p>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-plus me-2"></i>Create Your First Analysis
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.history-card {
+    background: hsl(var(--surface));
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    border: 1px solid hsl(var(--border-light));
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.history-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.emotion-indicator {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.history-text {
+    color: hsl(var(--text-secondary));
+    line-height: 1.5;
+}
+
+.confidence-display {
+    text-align: center;
+}
+
+.confidence-bar {
+    width: 80px;
+    height: 8px;
+    background: hsl(var(--border));
+    border-radius: 4px;
+    margin: 0.25rem auto;
+    overflow: hidden;
+}
+
+.confidence-fill {
+    height: 100%;
+    background: linear-gradient(135deg, hsl(var(--success)), hsl(var(--info)));
+    transition: width 0.3s ease;
+}
+
+.empty-state {
+    padding: 3rem 2rem;
+}
+
+.empty-icon {
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--info) / 0.1));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 2rem;
+    font-size: 2.5rem;
+    color: hsl(var(--primary));
+}
+
+.page-link {
+    border-radius: var(--border-radius);
+    margin: 0 0.25rem;
+    border: 1px solid hsl(var(--border));
+}
+
+.page-item.active .page-link {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--info)));
+    border-color: hsl(var(--primary));
+}
+</style>
+{% endblock %}

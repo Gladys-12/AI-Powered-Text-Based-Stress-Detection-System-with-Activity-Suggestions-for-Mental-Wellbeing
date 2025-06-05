@@ -1,0 +1,594 @@
+{% extends "base.html" %}
+
+{% block title %}Timeline - StressSense{% endblock %}
+
+{% block extra_head %}
+<!-- Chart.js for timeline visualization -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="section-title">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Emotion Timeline
+                    </h2>
+                    <p class="text-muted">Visualize your emotional journey over time</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary me-2">
+                        <i class="fas fa-plus me-2"></i>New Analysis
+                    </a>
+                    <a href="{{ url_for('history') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-list me-2"></i>View List
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if timeline_data %}
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <div class="stat-content">
+                    <h4>{{ total_entries }}</h4>
+                    <p>Total Entries</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-calendar-day"></i>
+                </div>
+                <div class="stat-content">
+                    <h4>{{ daily_trends|length }}</h4>
+                    <p>Days Tracked</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-smile"></i>
+                </div>
+                <div class="stat-content">
+                    <h4>{{ emotion_counts.get('happy', 0) + emotion_counts.get('neutral', 0) }}</h4>
+                    <p>Positive Moments</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-trending-up"></i>
+                </div>
+                <div class="stat-content">
+                    <h4 id="trend-indicator">📈</h4>
+                    <p>Current Trend</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline Visualization -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h5>
+                        <i class="fas fa-timeline me-2"></i>
+                        Emotion Timeline
+                    </h5>
+                    <div class="chart-controls">
+                        <button class="btn btn-sm btn-outline-primary" onclick="changeTimeRange('7days')">7 Days</button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="changeTimeRange('30days')">30 Days</button>
+                        <button class="btn btn-sm btn-outline-primary active" onclick="changeTimeRange('all')">All Time</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="timelineChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emotion Distribution -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h5>
+                        <i class="fas fa-pie-chart me-2"></i>
+                        Emotion Distribution
+                    </h5>
+                </div>
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="emotionPieChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h5>
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Daily Trends
+                    </h5>
+                </div>
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="dailyTrendsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Patterns -->
+    <div class="row">
+        <div class="col-12">
+            <div class="patterns-card">
+                <h5>
+                    <i class="fas fa-brain me-2"></i>
+                    Recent Patterns & Insights
+                </h5>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="pattern-item">
+                            <h6>Most Common Emotion</h6>
+                            {% set most_common = emotion_counts.items() | sort(attribute=1, reverse=true) | first %}
+                            {% if most_common %}
+                            <div class="emotion-badge emotion-{{ most_common[0] }}">
+                                {{ most_common[0].title() }} ({{ most_common[1] }} times)
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="pattern-item">
+                            <h6>Recent Activity</h6>
+                            <p class="text-muted">
+                                {% if timeline_data %}
+                                Last entry: {{ timeline_data[-1].timestamp[:10] }}
+                                {% else %}
+                                No recent activity
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="pattern-item">
+                            <h6>Wellness Tip</h6>
+                            <p class="text-muted small">
+                                Consider setting a daily mood check-in routine to better track your emotional patterns.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="row">
+        <div class="col-md-6 mx-auto text-center">
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h4>No Timeline Data Yet</h4>
+                <p class="text-muted mb-4">
+                    Start tracking your emotions to see beautiful visualizations of your emotional journey.
+                </p>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-plus me-2"></i>Start Tracking Emotions
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.stat-card {
+    background: hsl(var(--surface));
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    border: 1px solid hsl(var(--border-light));
+    display: flex;
+    align-items: center;
+    transition: transform 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--info)));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    margin-right: 1rem;
+}
+
+.stat-content h4 {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+    color: hsl(var(--text-primary));
+}
+
+.stat-content p {
+    color: hsl(var(--text-secondary));
+    margin-bottom: 0;
+    font-size: 0.9rem;
+}
+
+.chart-card {
+    background: hsl(var(--surface));
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow);
+    border: 1px solid hsl(var(--border-light));
+    overflow: hidden;
+}
+
+.chart-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid hsl(var(--border));
+    display: flex;
+    justify-content: between;
+    align-items: center;
+}
+
+.chart-header h5 {
+    margin-bottom: 0;
+    color: hsl(var(--text-primary));
+}
+
+.chart-controls {
+    margin-left: auto;
+}
+
+.chart-controls .btn.active {
+    background: hsl(var(--primary));
+    color: white;
+    border-color: hsl(var(--primary));
+}
+
+.chart-container {
+    padding: 1.5rem;
+    height: 400px;
+    position: relative;
+}
+
+.patterns-card {
+    background: hsl(var(--surface));
+    border-radius: var(--border-radius-lg);
+    padding: 2rem;
+    box-shadow: var(--shadow);
+    border: 1px solid hsl(var(--border-light));
+}
+
+.patterns-card h5 {
+    color: hsl(var(--text-primary));
+    margin-bottom: 1.5rem;
+}
+
+.pattern-item {
+    padding: 1rem;
+    background: hsl(var(--light));
+    border-radius: var(--border-radius);
+    height: 100%;
+}
+
+.pattern-item h6 {
+    color: hsl(var(--text-primary));
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+}
+
+.empty-state {
+    padding: 3rem 2rem;
+}
+
+.empty-icon {
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--info) / 0.1));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 2rem;
+    font-size: 2.5rem;
+    color: hsl(var(--primary));
+}
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Timeline data from Flask
+const timelineData = {{ timeline_data | tojson }};
+const emotionCounts = {{ emotion_counts | tojson }};
+const dailyTrends = {{ daily_trends | tojson }};
+
+// Emotion colors
+const emotionColors = {
+    'happy': '#7CB342',
+    'sad': '#1E88E5',
+    'angry': '#E53935',
+    'anxious': '#FB8C00',
+    'stressed': '#8E24AA',
+    'neutral': '#607D8B'
+};
+
+let timelineChart, emotionPieChart, dailyTrendsChart;
+
+// Initialize charts when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    if (timelineData.length > 0) {
+        initializeTimelineChart();
+        initializeEmotionPieChart();
+        initializeDailyTrendsChart();
+    }
+});
+
+function initializeTimelineChart() {
+    const ctx = document.getElementById('timelineChart').getContext('2d');
+    
+    // Transform data for Chart.js
+    const chartData = timelineData.map(item => ({
+        x: new Date(item.timestamp),
+        y: getEmotionValue(item.emotion),
+        emotion: item.emotion,
+        text: item.text,
+        confidence: item.confidence
+    }));
+
+    timelineChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [{
+                label: 'Emotion Timeline',
+                data: chartData,
+                borderColor: 'hsl(210, 100%, 56%)',
+                backgroundColor: 'hsl(210, 100%, 56%, 0.1)',
+                pointBackgroundColor: chartData.map(item => emotionColors[item.emotion]),
+                pointBorderColor: chartData.map(item => emotionColors[item.emotion]),
+                pointRadius: 6,
+                pointHoverRadius: 8,
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'day',
+                        displayFormats: {
+                            day: 'MMM dd'
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    }
+                },
+                y: {
+                    min: 0,
+                    max: 6,
+                    ticks: {
+                        callback: function(value) {
+                            const emotions = ['', 'Sad', 'Angry', 'Anxious', 'Neutral', 'Stressed', 'Happy'];
+                            return emotions[value] || '';
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Emotion'
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        title: function(context) {
+                            return new Date(context[0].parsed.x).toLocaleDateString();
+                        },
+                        label: function(context) {
+                            const dataPoint = chartData[context.dataIndex];
+                            return [
+                                `Emotion: ${dataPoint.emotion.charAt(0).toUpperCase() + dataPoint.emotion.slice(1)}`,
+                                `Confidence: ${(dataPoint.confidence * 100).toFixed(0)}%`,
+                                `Text: ${dataPoint.text}`
+                            ];
+                        }
+                    }
+                },
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+
+function initializeEmotionPieChart() {
+    const ctx = document.getElementById('emotionPieChart').getContext('2d');
+    
+    const emotions = Object.keys(emotionCounts);
+    const counts = Object.values(emotionCounts);
+    const colors = emotions.map(emotion => emotionColors[emotion]);
+
+    emotionPieChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: emotions.map(e => e.charAt(0).toUpperCase() + e.slice(1)),
+            datasets: [{
+                data: counts,
+                backgroundColor: colors,
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = counts.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return `${context.label}: ${context.parsed} (${percentage}%)`;
+                        }
+                    }
+                },
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                }
+            }
+        }
+    });
+}
+
+function initializeDailyTrendsChart() {
+    const ctx = document.getElementById('dailyTrendsChart').getContext('2d');
+    
+    // Group daily trends by emotion
+    const emotionDaily = {};
+    dailyTrends.forEach(trend => {
+        if (!emotionDaily[trend.emotion]) {
+            emotionDaily[trend.emotion] = [];
+        }
+        emotionDaily[trend.emotion].push({
+            x: trend.date,
+            y: trend.count
+        });
+    });
+
+    const datasets = Object.keys(emotionDaily).map(emotion => ({
+        label: emotion.charAt(0).toUpperCase() + emotion.slice(1),
+        data: emotionDaily[emotion],
+        backgroundColor: emotionColors[emotion] + '40',
+        borderColor: emotionColors[emotion],
+        borderWidth: 2
+    }));
+
+    dailyTrendsChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'day',
+                        displayFormats: {
+                            day: 'MMM dd'
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Entries'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                }
+            }
+        }
+    });
+}
+
+function getEmotionValue(emotion) {
+    const values = {
+        'sad': 1,
+        'angry': 2,
+        'anxious': 3,
+        'neutral': 4,
+        'stressed': 5,
+        'happy': 6
+    };
+    return values[emotion] || 4;
+}
+
+function changeTimeRange(range) {
+    // Update active button
+    document.querySelectorAll('.chart-controls .btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+
+    // Filter data based on range
+    let filteredData = timelineData;
+    const now = new Date();
+    
+    if (range === '7days') {
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        filteredData = timelineData.filter(item => new Date(item.timestamp) >= sevenDaysAgo);
+    } else if (range === '30days') {
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        filteredData = timelineData.filter(item => new Date(item.timestamp) >= thirtyDaysAgo);
+    }
+
+    // Update timeline chart with filtered data
+    const chartData = filteredData.map(item => ({
+        x: new Date(item.timestamp),
+        y: getEmotionValue(item.emotion),
+        emotion: item.emotion,
+        text: item.text,
+        confidence: item.confidence
+    }));
+
+    timelineChart.data.datasets[0].data = chartData;
+    timelineChart.data.datasets[0].pointBackgroundColor = chartData.map(item => emotionColors[item.emotion]);
+    timelineChart.data.datasets[0].pointBorderColor = chartData.map(item => emotionColors[item.emotion]);
+    timelineChart.update();
+}
+</script>
+{% endblock %}

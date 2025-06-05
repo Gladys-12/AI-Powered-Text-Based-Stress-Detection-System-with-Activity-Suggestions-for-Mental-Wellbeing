@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Analysis Result - StressSense{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Back Navigation -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Analysis Results -->
+    <div class="row mb-4">
+        <div class="col-lg-8 mx-auto">
+            <div class="result-card">
+                <div class="text-center mb-4">
+                    <h2 class="result-title">Your Mood Analysis</h2>
+                    <p class="text-muted">Based on your input, here's what we found</p>
+                </div>
+
+                <!-- Your Input -->
+                <div class="input-display mb-4">
+                    <h5 class="mb-3">
+                        <i class="fas fa-quote-left me-2"></i>
+                        What You Shared
+                    </h5>
+                    <div class="input-text">
+                        "{{ text_input }}"
+                    </div>
+                </div>
+
+                <!-- Emotion Result -->
+                <div class="emotion-result mb-4">
+                    <div class="text-center">
+                        <div class="emotion-circle" style="background-color: {{ emotion_color }}20; border-color: {{ emotion_color }};">
+                            <div class="emotion-icon" style="color: {{ emotion_color }};">
+                                {% if result.emotion == 'happy' %}
+                                    <i class="fas fa-smile-beam"></i>
+                                {% elif result.emotion == 'sad' %}
+                                    <i class="fas fa-sad-tear"></i>
+                                {% elif result.emotion == 'angry' %}
+                                    <i class="fas fa-angry"></i>
+                                {% elif result.emotion == 'anxious' %}
+                                    <i class="fas fa-meh-blank"></i>
+                                {% elif result.emotion == 'stressed' %}
+                                    <i class="fas fa-tired"></i>
+                                {% else %}
+                                    <i class="fas fa-meh"></i>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        
+                        <h3 class="emotion-label mt-3" style="color: {{ emotion_color }};">
+                            {{ result.emotion.title() }}
+                        </h3>
+                       
+    
+
+                        {% if result.confidence %}
+                        <div class="confidence-display">
+                            <span class="badge bg-light text-dark">
+                                {{ "%.0f"|format(result.confidence * 100) }}% confidence
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Wellness Activities -->
+                {% if result.activities %}
+                <div class="activities-section">
+                    <h5 class="activities-title">
+                        <i class="fas fa-heart me-2"></i>
+                        Recommended Wellness Activities
+                    </h5>
+                    <p class="text-muted mb-3">
+                        Based on your current mood, here are some activities that might help:
+                    </p>
+                    
+                    <div class="activities-list">
+                        {% for activity in result.activities %}
+                        <div class="activity-item">
+                            <div class="activity-icon">
+                                {% if loop.index == 1 %}
+                                    <i class="fas fa-star"></i>
+                                {% elif loop.index == 2 %}
+                                    <i class="fas fa-leaf"></i>
+                                {% else %}
+                                    <i class="fas fa-lightbulb"></i>
+                                {% endif %}
+                            </div>
+                            <div class="activity-content">
+                                <p class="mb-0">{{ activity }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Action Buttons -->
+                <div class="action-buttons mt-4">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-primary w-100">
+                                <i class="fas fa-plus me-2"></i>
+                                Share Another Feeling
+                            </a>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <a href="{{ url_for('history') }}" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-history me-2"></i>
+                                View History
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Resources -->
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="resources-card">
+                <h5 class="resources-title">
+                    <i class="fas fa-hands-helping me-2"></i>
+                    Additional Resources
+                </h5>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="resource-item">
+                            <h6><i class="fas fa-phone me-2"></i>Crisis Support</h6>
+                            <p class="small text-muted">
+                                If you're in crisis, reach out to a mental health professional or crisis hotline immediately.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <div class="resource-item">
+                            <h6><i class="fas fa-user-md me-2"></i>Professional Help</h6>
+                            <p class="small text-muted">
+                                Consider talking to a therapist or counselor for personalized support and guidance.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Remember:</strong> This analysis is for wellness purposes only and is not a substitute for professional medical advice, diagnosis, or treatment.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Add some interactive elements
+    document.addEventListener('DOMContentLoaded', function() {
+        // Animate the emotion circle on load
+        const emotionCircle = document.querySelector('.emotion-circle');
+        if (emotionCircle) {
+            emotionCircle.style.transform = 'scale(0.8)';
+            emotionCircle.style.transition = 'transform 0.5s ease';
+            setTimeout(() => {
+                emotionCircle.style.transform = 'scale(1)';
+            }, 100);
+        }
+        
+        // Animate activity items
+        const activityItems = document.querySelectorAll('.activity-item');
+        activityItems.forEach((item, index) => {
+            item.style.opacity = '0';
+            item.style.transform = 'translateY(20px)';
+            item.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            
+            setTimeout(() => {
+                item.style.opacity = '1';
+                item.style.transform = 'translateY(0)';
+            }, (index + 1) * 200);
+        });
+    });
+</script>
+{% endblock %}

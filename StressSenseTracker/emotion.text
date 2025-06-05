@@ -1,0 +1,179 @@
+import os
+import joblib
+import pandas as pd
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report
+import string
+import re
+import logging
+
+# Simple stopwords list to avoid NLTK dependency issues
+STOPWORDS = {
+    'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he',
+    'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the', 'to', 'was', 'will', 'with',
+    'i', 'me', 'my', 'we', 'our', 'you', 'your', 'they', 'them', 'their', 'this',
+    'that', 'these', 'those', 'am', 'is', 'are', 'was', 'were', 'been', 'being',
+    'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should', 'could'
+}
+
+class EmotionPredictor:
+    def __init__(self, model_path='model.pkl'):
+        self.model_path = model_path
+        self.model = None
+        self.vectorizer = None
+        self.stop_words = STOPWORDS
+        
+        # Activity recommendations for each emotion
+        self.activity_recommendations = {
+            'sad': [
+                'Write in a journal about your feelings - expressing emotions can help process them',
+                'Reach out to a trusted friend or family member for emotional support',
+                'Take a gentle walk outside - fresh air and movement can lift your mood',
+                'Listen to comforting music or watch a feel-good movie',
+                'Practice self-compassion and remind yourself that it\'s okay to feel sad',
+                'Try a warm bath with calming essential oils',
+                'Consider professional counseling if sadness persists'
+            ],
+            'angry': [
+                'Take 10 deep breaths using the 4-7-8 technique (inhale 4, hold 7, exhale 8)',
+                'Go for a vigorous walk or do jumping jacks to release physical tension',
+                'Write down what made you angry and why - understanding helps process it',
+                'Count to 20 before responding to whatever triggered your anger',
+                'Try progressive muscle relaxation starting from your toes to your head',
+                'Hit a pillow or scream into it to safely release anger',
+                'Step away from the situation if possible until you feel calmer'
+            ],
+            'happy': [
+                'Share your joy with loved ones - happiness is contagious!',
+                'Write down what made you happy to remember it later',
+                'Do something kind for someone else to spread the positivity',
+                'Take photos or create a memory of this moment',
+                'Dance to your favorite upbeat music',
+                'Plan something fun to look forward to',
+                'Practice gratitude by listing 3 things you\'re thankful for today'
+            ],
+            'anxious': [
+                'Try the 5-4-3-2-1 grounding technique: name 5 things you see, 4 you hear, 3 you feel, 2 you smell, 1 you taste',
+                'Practice box breathing: inhale for 4, hold for 4, exhale for 4, hold for 4',
+                'Challenge anxious thoughts by asking "Is this realistic?" and "What would I tell a friend?"',
+                'Do a 10-minute guided meditation using an app like Headspace or Calm',
+                'Write down your worries and then write realistic outcomes',
+                'Try gentle yoga or stretching to release physical tension',
+                'Limit caffeine and try herbal tea like chamomile instead'
+            ],
+            'stressed': [
+                'Make a priority list and tackle one task at a time',
+                'Take a 5-minute break every hour to breathe deeply and stretch',
+                'Break large tasks into smaller, manageable steps',
+                'Say no to non-essential commitments right now',
+                'Try the "two-minute rule" - if something takes less than 2 minutes, do it now',
+                'Take a warm shower or bath to physically relax your muscles',
+                'Set boundaries around work time and personal time',
+                'Ask for help with tasks that others can handle'
+            ],
+            'neutral': [
+                'Take time to appreciate this moment of calm and balance',
+                'Use this stable energy to plan ahead or organize your space',
+                'Try a new hobby or learn something interesting',
+                'Reach out to a friend you haven\'t talked to in a while',
+                'Do something creative like drawing, writing, or crafting',
+                'Practice mindfulness by fully focusing on whatever you\'re doing',
+                'Set a small goal for tomorrow to maintain forward momentum'
+            ]
+        }
+    
+    def preprocess_text(self, text):
+        """Preprocess text for emotion prediction"""
+        if not text or not isinstance(text, str):
+            return ""
+        
+        # Convert to lowercase
+        text = text.lower()
+        
+        # Remove URLs, mentions, and hashtags
+        text = re.sub(r'http\S+|www\S+|https\S+', '', text, flags=re.MULTILINE)
+        text = re.sub(r'@\w+|#\w+', '', text)
+        
+        # Keep important punctuation that indicates emotion (! ? ...)
+        # Remove other punctuation but preserve emotional intensity
+        text = re.sub(r'[^\w\s!?.]', ' ', text)
+        text = re.sub(r'\d+', '', text)
+        
+        # Keep important emotional words, be less aggressive with stopword removal
+        tokens = text.split()
+        # Keep more words that might be emotionally significant
+        tokens = [token for token in tokens if len(token) > 1 and token not in {'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'}]
+        
+        return ' '.join(tokens)
+    
+    def load_model(self):
+        """Load the trained model and vectorizer"""
+        try:
+            if os.path.exists(self.model_path):
+                model_data = joblib.load(self.model_path)
+                self.model = model_data['model']
+                self.vectorizer = model_data['vectorizer']
+                logging.info("Model loaded successfully")
+                return True
+            else:
+                logging.warning(f"Model file {self.model_path} not found")
+                return False
+        except Exception as e:
+            logging.error(f"Error loading model: {str(e)}")
+            return False
+    
+    def predict_emotion(self, text):
+        """Predict emotion from text input"""
+        if not self.model or not self.vectorizer:
+            if not self.load_model():
+                return {'emotion': 'neutral', 'confidence': 0.0, 'error': 'Model not available'}
+        
+        try:
+            # Preprocess the text
+            processed_text = self.preprocess_text(text)
+            
+            if not processed_text:
+                return {'emotion': 'neutral', 'confidence': 0.5, 'activities': self.activity_recommendations['neutral']}
+            
+            # Vectorize the text
+            text_vector = self.vectorizer.transform([processed_text])
+            
+            # Predict emotion
+            prediction = self.model.predict(text_vector)[0]
+            confidence = max(self.model.predict_proba(text_vector)[0])
+            
+            # Get activity recommendations
+            activities = self.activity_recommendations.get(prediction, self.activity_recommendations['neutral'])
+            
+            return {
+                'emotion': prediction,
+                'confidence': float(confidence),
+                'activities': activities
+            }
+        
+        except Exception as e:
+            logging.error(f"Error predicting emotion: {str(e)}")
+            return {
+                'emotion': 'neutral',
+                'confidence': 0.0,
+                'activities': self.activity_recommendations['neutral'],
+                'error': str(e)
+            }
+    
+    def get_emotion_color(self, emotion):
+        """Get color code for emotion visualization"""
+        colors = {
+            'happy': '#4CAF50',     # Green
+            'sad': '#2196F3',       # Blue
+            'angry': '#F44336',     # Red
+            'anxious': '#FF9800',   # Orange
+            'stressed': '#9C27B0',  # Purple
+            'neutral': '#607D8B'    # Blue Grey
+        }
+        return colors.get(emotion, '#607D8B')
+
+# Global instance for use across the application
+emotion_predictor = EmotionPredictor()
