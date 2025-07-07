@@ -14,16 +14,20 @@ A Flask-based mental health web application that detects stress levels from text
 
 ## Screenshots
 
-```markdown
+
 ### Login Page
 ![Login Page](screenshots/login.png)
+
+### Registration Page
+![Register Page](screenshots/register.png)
+
 
 ### Dashboard
 ![Dashboard](screenshots/dashboard.png)
 
-### Emotion Timeline
-![Timeline](screenshots/timeline.png)
-
+### Output
+![Output](screenshots/outpput1.png)
+![Output1](screenshots/output2.png)
 
 The app includes:
 - Beautiful dashboard for mood analysis
