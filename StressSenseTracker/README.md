@@ -14,6 +14,17 @@ A Flask-based mental health web application that detects stress levels from text
 
 ## Screenshots
 
+```markdown
+### Login Page
+![Login Page](screenshots/login.png)
+
+### Dashboard
+![Dashboard](screenshots/dashboard.png)
+
+### Emotion Timeline
+![Timeline](screenshots/timeline.png)
+
+
 The app includes:
 - Beautiful dashboard for mood analysis
 - Interactive timeline with Chart.js visualizations
@@ -168,13 +179,6 @@ The emotion detection uses:
 
 4. **Model training issues**: The app will automatically train the model on first run
 
-## Contributing
-
-This is a mental health application. When contributing:
-- Ensure accuracy in emotion detection
-- Maintain professional, supportive language
-- Test thoroughly before submitting changes
-- Follow accessibility guidelines
 
 ## Disclaimer
 
@@ -183,9 +187,11 @@ This application is for wellness purposes only and is not a substitute for profe
 ## License
 
 This project is for educational and personal use. Please respect mental health and use responsibly.
+✅ You may use, study, and modify the code for learning or personal wellness projects.
+
+❌ You may not use this project for commercial purposes or redistribute it without permission.
+
+🔒 Please respect the purpose and sensitivity of mental health applications.
 
 ---
 
-**Made with ❤️ for mental wellness**
-
-For support or questions, check the code comments or create an issue in the project repository.
